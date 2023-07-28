@@ -15,10 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Access environment variables
-# account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-# auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-account_sid = "ACed4ed5e0907494ea975129f57d09de72";
-auth_token = "4371c431d03ec576a9102ad453026d6e";
+account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+
 
 client = Client(account_sid, auth_token)
 
