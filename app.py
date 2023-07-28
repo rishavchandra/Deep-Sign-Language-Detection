@@ -6,6 +6,23 @@ from tensorflow.keras.models import load_model
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
 import av
 from collections import deque
+from twilio.rest import Client
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Access environment variables
+# account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+# auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+account_sid = "ACed4ed5e0907494ea975129f57d09de72";
+auth_token = "4371c431d03ec576a9102ad453026d6e";
+
+client = Client(account_sid, auth_token)
+
+token = client.tokens.create()
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic = mp.solutions.holistic
@@ -66,7 +83,14 @@ class VideoProcessor(VideoProcessorBase):
         self.model = load_model('action.h5')
         self.actions = np.array(["hello", "thanks", "please", "iloveyou", "takecare"])
         self.colors = [(245, 39, 16), (108, 245, 16), (16, 184, 245), (245, 226, 16), (153, 16, 245)]
-        self.holistic = mp.solutions.holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        
+        self.min_detection_confidence = 0.2
+        self.min_tracking_confidence = 0.2
+        
+        self.holistic = mp.solutions.holistic.Holistic(
+            min_detection_confidence=self.min_detection_confidence,
+            min_tracking_confidence=self.min_tracking_confidence
+        )
         self.sentence_queue = deque(maxlen=6)
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
@@ -80,19 +104,24 @@ class VideoProcessor(VideoProcessorBase):
 
         image = prob_viz(res, self.actions, image, self.colors)
 
-        sentence_text = ' '.join(self.sentence_queue)
-        cv2.rectangle(image, (0, 0), (image.shape[1], 50), (138, 138, 138), -1)
-        cv2.putText(image, sentence_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+        if len(self.sentence_queue) > 0:  
+            sentence_text = ' '.join(self.sentence_queue)
+            cv2.rectangle(image, (0, 0), (image.shape[1], 50), (0, 0, 0), -1)
+            cv2.putText(image, sentence_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
         if np.max(res) > 0.6:
             action = self.actions[np.argmax(res)]
-            self.sentence_queue.append(action)
+            if action not in self.sentence_queue:
+                self.sentence_queue.append(action)
 
         return av.VideoFrame.from_ndarray(image, format='bgr24')
 
 rtc_configuration = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    {
+        "iceServers": token.ice_servers
+    }
 )
+
 
 def main():
     st.title("Real-Time Sign Detection")

@@ -82,3 +82,5 @@ validators==0.20.0
 Werkzeug==2.3.6
 wrapt==1.15.0
 zipp==3.16.1
+twilio
+python-dotenv
